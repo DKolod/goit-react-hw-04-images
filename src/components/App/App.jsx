@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+// import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,28 +12,26 @@ import Modal from 'components/Modal/Modal';
 import Loader from '../Loader/Loader';
 import Button from 'components/Button/Button';
 
-export class App extends Component {
-  state = {
-    searchName: '',
-    images: [],
-    largeImageURL: '',
-    alt: '',
-    showModal: false,
-    loading: false,
-    visible: false,
-    page: 1,
-  };
+export function App() {
+  const [searchName, setSearchName] = useState('');
+  const [images, setImages] = useState([]);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [alt, setAlt] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [page, setPage] = useState(1);
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { searchName, page } = this.state;
-    try {
-      if (prevState.searchName !== searchName) {
-        this.setState({ loading: true, images: [], page: 1, visible: false });
-      }
+  useEffect(() => {
+    if (!searchName) {
+      return;
+    }
+    setLoading(true);
+    setVisible(false);
 
-      if (searchName !== prevState.searchName || page !== prevState.page) {
-        const response = await searchImg(searchName, page);
-        const images = response.hits.map(
+    searchImg(searchName, page)
+      .then(data => {
+        const images = data.hits.map(
           ({ id, tags, webformatURL, largeImageURL }) => ({
             id,
             tags,
@@ -41,73 +40,48 @@ export class App extends Component {
           })
         );
 
-        images.length > 0
-          ? toast.success('Done')
-          : toast.warning(' Not Found ');
+        images.length > 0 ? toast.success('Done') : toast.warning('Not Found');
 
-        images.length > 11
-          ? this.setState({ visible: true })
-          : this.setState({ visible: false });
+        images.length > 11 ? setVisible(true) : setVisible(false);
 
-        this.setState(state => ({
-          images: [...state.images, ...images],
-          loading: false,
-        }));
-      }
-    } catch (eror) {
-      console.log(eror.message);
-      toast.error('eror.message 404');
-    }
-  }
+        setImages(state => [...state, ...images]);
+        setLoading(false);
+      })
+      .catch(eror => toast.error('eror.message 404'));
+  }, [searchName, page]);
 
-  hendleSubmit = e => {
-    this.setState({ page: 1 });
-    this.setState({ searchName: e });
+  const hendleSubmit = e => {
+    setPage(1);
+    setImages([]);
+    setSearchName(e);
   };
 
-  onImgClick = (largeImageURL, alt) => {
-    this.setState({ largeImageURL, alt });
-    this.togleModal();
+  const onImgClick = (largeImageURL, alt) => {
+    setLargeImageURL(largeImageURL);
+    setAlt(alt);
+    togleModal();
   };
 
-  togleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
+  const togleModal = () => {
+    setShowModal(show => !show);
   };
-  onLoadMore = () => {
-    this.setState(state => ({ page: state.page + 1, loading: true }));
+  const onLoadMore = () => {
+    setPage(state => state + 1);
   };
 
-  showMoreButton = () => {
-    this.setState({ loading: true });
-  };
-  hideMoreButton = () => {
-    this.setState({ loading: false });
-  };
+  return (
+    <div className={css.Container}>
+      <Searchbar onSubmit={hendleSubmit} />
+      <ImageGallery images={images} onClick={onImgClick} />
+      {showModal && (
+        <Modal onClose={togleModal}>
+          <img src={largeImageURL} alt={alt} />
+        </Modal>
+      )}
+      {loading && <Loader />}
+      {visible && <Button onClick={onLoadMore} />}
 
-  render() {
-    const { showModal, images, largeImageURL, alt, visible, loading } =
-      this.state;
-    return (
-      <div className={css.Container}>
-        <Searchbar onSubmit={this.hendleSubmit} />
-        <ImageGallery
-          images={images}
-          onClick={this.onImgClick}
-          showMoreButton={this.showMoreButton}
-          hideMoreButton={this.hideMoreButton}
-        />
-        {showModal && (
-          <Modal onClose={this.togleModal}>
-            <img src={largeImageURL} alt={alt} />
-          </Modal>
-        )}
-        {loading && <Loader />}
-        {visible && <Button onClick={this.onLoadMore} />}
-
-        <ToastContainer />
-      </div>
-    );
-  }
+      <ToastContainer />
+    </div>
+  );
 }
