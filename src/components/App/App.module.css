@@ -1,0 +1,7 @@
+.Container {
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    background-color: rgba(248, 248, 4, 0.315);
+}
+
